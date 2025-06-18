@@ -1,0 +1,1 @@
+export { default } from "file:///Users/tin/Documents/GitHub/cartoncaps-chat-poc/frontend/node_modules/@nuxt/vite-builder/dist/runtime/client.manifest.mjs"
