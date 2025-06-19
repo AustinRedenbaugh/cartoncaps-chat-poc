@@ -160,6 +160,7 @@ class ReactAgent:
                             yield {
                                 "step_type": "final_response",
                                 "message": messages[-1],
+                                "is_thinking": False,
                             }
                     break
                 
@@ -175,6 +176,7 @@ class ReactAgent:
                     yield {
                         "step_type": "step",
                         "message": text_for_ui,
+                        "is_thinking": False,
                     }
                 else:
                     print(f"func: this_message: {this_message.content}")
@@ -192,6 +194,7 @@ class ReactAgent:
                                 yield {
                                     "step_type": "step",
                                     "message": custom_msg,
+                                    "is_thinking": True,
                                 }
                     pass
         except Exception as e:
@@ -199,7 +202,8 @@ class ReactAgent:
             print(f"ReactAgent.ainvoke error: {e}\n{tb_str}")
             yield {
                 "step_type": "error",
-                "message": ""
+                "message": "",
+                "is_thinking": True,
             }
 
 def is_function_call(message: BaseMessage) -> bool:

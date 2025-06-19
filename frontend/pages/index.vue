@@ -38,6 +38,7 @@
             chatMessages.value.push({
                 role: "User",
                 message: userMessage,
+                is_thinking: false,
             });
 
             // Clear input
@@ -51,6 +52,7 @@
             chatMessages.value.push({
                 role: "Assistant",
                 message: "Thinking...",
+                is_thinking: true,
             });
 
             try {
@@ -72,24 +74,16 @@
                                 chatMessages.value[assistantMessageIndex] = {
                                     role: "Assistant",
                                     message: stepData.message,
+                                    is_thinking: stepData.is_thinking,
                                 };
                             } else if (stepData.step_type === "step") {
                                 // Update with processing status
                                 chatMessages.value[assistantMessageIndex] = {
                                     role: "Assistant",
                                     message: stepData.message,
+                                    is_thinking: stepData.is_thinking,
                                 };
                             }
-                        } else if (data.type === "function_call") {
-                            console.log("data.type === function_call");
-                            console.log("data: ", data);
-                            const stepData = data.content;
-                            console.log("stepData: ", stepData);
-                            // Update with function call
-                            chatMessages.value[assistantMessageIndex] = {
-                                role: "Assistant",
-                                message: data.message,
-                            };
                         }
                     },
                     // onComplete callback
@@ -102,8 +96,8 @@
                         console.error("Error sending message:", error);
                         chatMessages.value[assistantMessageIndex] = {
                             role: "Assistant",
-                            message:
-                                "Sorry, there was an error processing your message.",
+                            message: "Sorry, there was an error processing your message.",
+                            is_thinking: false,
                         };
                     }
                 );
@@ -130,6 +124,7 @@
                 chatMessages.value.push({
                     role: "Assistant",
                     message: helloResponse.message,
+                    is_thinking: false,
                 });
                 // Update conversation ID
                 conversationId.value = helloResponse.conversation_id;
@@ -148,7 +143,7 @@
             User: {{ selectedUser?.name ?? "Select a user" }}
         </h1>
 
-        <div class="h-[576px] w-96 rounded-md border bg-gray-500 flex flex-col">
+        <div class="h-[576px] w-96 rounded-md border bg-gray-200 flex flex-col">
             <!-- Scrollable chat area -->
             <div class="flex-1 overflow-auto">
                 <ScrollArea class="h-full p-4 space-y-20">
@@ -165,17 +160,19 @@
                         <div class="flex flex-col">
                             <div
                                 :class="[
-                                    'max-w-64 rounded-lg px-3 py-2 text-sm flex flex-col',
-                                    msg.role === 'Assistant'
-                                        ? 'bg-blue-500 text-white pr-2'
-                                        : 'bg-green-500 text-white pr-3',
+                                    'max-w-80 rounded-lg px-3 py-2 text-sm flex flex-col',
+                                    msg.role === 'Assistant' && msg.is_thinking
+                                        ? 'bg-gray-300 text-black pr-2'
+                                        : msg.role === 'Assistant'
+                                            ? 'bg-green-300 text-black pr-2'
+                                            : 'bg-blue-300 text-black pr-2',
                                 ]"
                             >
                                 {{ msg.message ?? "(no message)" }}
                             </div>
                             <div
                                 :class="[
-                                    'text-xs text-gray-300 mt-1 mb-[5px]',
+                                    'text-xs text-gray-400 mt-1 mb-[5px]',
                                     msg.role === 'Assistant'
                                         ? 'text-left'
                                         : 'text-right',
