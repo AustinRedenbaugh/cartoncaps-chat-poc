@@ -60,9 +60,10 @@ class ConversationHistory(Base):
     message = Column(Text, nullable=False)
     sender = Column(String, nullable=True)
     timestamp = Column(String, nullable=False)
+    conversation_id = Column(Integer, nullable=True)
 
     __table_args__ = (
-        CheckConstraint("sender IN ('user', 'bot')"),
+        CheckConstraint("sender IN ('user', 'bot', 'tool')"),
     )
 
     user = relationship("User", back_populates="conversations")

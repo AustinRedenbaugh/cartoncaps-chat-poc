@@ -9,4 +9,5 @@ export interface ChatMessageEntry {
 export interface MessageRequest {
     user_id: number;
     message: string;
+    conversation_id: number;
 }

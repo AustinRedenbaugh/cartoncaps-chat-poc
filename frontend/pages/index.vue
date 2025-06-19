@@ -61,6 +61,7 @@
                     {
                         user_id: selectedUser.value.id,
                         message: userMessage,
+                        conversation_id: conversationId.value,
                     },
                     // onStep callback
                     (data) => {
@@ -108,6 +109,7 @@
                     role: "Assistant",
                     message:
                         "Sorry, there was an error processing your message.",
+                    is_thinking: false,
                 };
             }
         }
@@ -142,7 +144,9 @@
         <h1 class="text-white text-sm">
             User: {{ selectedUser?.name ?? "Select a user" }}
         </h1>
-
+        <h1 class="text-white text-sm">
+            Conversation_ID: {{ conversationId ?? -10 }}
+        </h1>
         <div class="h-[576px] w-96 rounded-md border bg-gray-200 flex flex-col">
             <!-- Scrollable chat area -->
             <div class="flex-1 overflow-auto">

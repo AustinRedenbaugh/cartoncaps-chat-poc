@@ -17,6 +17,7 @@ import traceback
 from .tools import get_react_agent_tools
 import json
 import inspect
+from .prompts import get_system_prompt
 
 # Custom messages for function calls
 default_function_call_message = "Calling function..."
@@ -31,24 +32,48 @@ class ReactAgentState(TypedDict):
     current_node: str
 
 class ReactAgent:
-    def __init__(self, llm_with_tools, user_id, user_message, db=None):
+    def __init__(self, llm_with_tools, user_id, user_message, conversation_id, db=None):
         self.llm_with_tools = llm_with_tools
         self.user_id = user_id
+        self.conversation_id = conversation_id
         self.user_message = user_message
         self.db = db
         self.graph = StateGraph(ReactAgentState)
         self.tool_node = ToolNode(get_react_agent_tools())
         self._setup_graph()
 
-    def get_initial_messages(self, user_id):
-        # Return just the list of messages
-        return [{"role": "user", "content": self.user_message}]
+    def get_initial_messages(self):
+        # Add system prompt as the first message
+        system_prompt = get_system_prompt('ReactAgent')
+        system_message = {"role": "system", "content": system_prompt}
+        # If db and conversation_id are available, fetch all prior messages for this conversation
+        if self.db and self.conversation_id is not None:
+            history = crud.get_conversation_messages(self.db, self.conversation_id)
+            messages = []
+            for row in history:
+                if row.sender == 'user':
+                    role = 'user'
+                elif row.sender == 'bot':
+                    role = 'assistant'
+                elif row.sender == 'tool':
+                    role = 'tool'
+                else:
+                    role = 'assistant'  # fallback
+                messages.append({
+                    'role': role,
+                    'content': row.message
+                })
+            if messages:
+                return [system_message] + messages
+        # Fallback: just the current user message
+        return [system_message, {"role": "user", "content": self.user_message}]
 
     async def call_model(self, state):
         messages = state["messages"]
+        print(f"[ReactAgent call_model] messages: {messages}")
         # Call the LLM with the current messages
         response = await self.llm_with_tools.ainvoke(messages)
-        print(f"response: {response}")
+        # print(f"response: {response}")
         new_messages = messages + [response]
 
         message_to_post = getattr(response, 'content', str(response))
@@ -70,7 +95,8 @@ class ReactAgent:
                 user_id=self.user_id,
                 message=message_to_post,
                 sender="bot",
-                timestamp=timestamp
+                timestamp=timestamp,
+                conversation_id=self.conversation_id
             )
         # print(f"[ReactAgent call_model] new_messages: {new_messages}")
         return {"messages": new_messages, "current_node": "call_model"}
@@ -93,7 +119,7 @@ class ReactAgent:
             tool_result = await self.tool_node.ainvoke({"messages": messages})
             # tool_result['messages'] is a list of ToolMessage(s)
             tool_response = self.message_to_dict(tool_result.get("messages", [None])[-1])
-            print(f"Xtool_response: {tool_response}")
+            # print(f"Xtool_response: {tool_response}")
             tool_text = tool_result.get("messages", [None])[-1].content if tool_result.get("messages") else None
             new_messages = messages + [tool_response]
         except Exception as e:
@@ -107,8 +133,9 @@ class ReactAgent:
                 db=self.db,
                 user_id=self.user_id,
                 message=tool_text,
-                sender="bot",
-                timestamp=timestamp
+                sender="tool",
+                timestamp=timestamp,
+                conversation_id=self.conversation_id
             )
         # print(f"[ReactAgent call_tool] new_messages: {new_messages}")
         return {"messages": new_messages, "current_node": "call_tool"}
@@ -140,14 +167,14 @@ class ReactAgent:
 
     async def ainvoke(self) -> AsyncGenerator[dict, None]:
         """Async generator: yields each step, and yields a final response at the end."""
-        messages = self.get_initial_messages(self.user_id)
+        messages = self.get_initial_messages()
         initial_state = {
             "messages": messages,
             "current_node": "__start__"
         }
         try:
             async for step in self.app.astream(initial_state, stream_mode="values"):
-                print(f"step: {step}")
+                # print(f"step: {step}")
                 messages = step["messages"]
                 current_node = step["current_node"]
                 # print(f"current_node: {current_node}")
@@ -170,7 +197,7 @@ class ReactAgent:
                 # Yield depending on UI Update is desired 
                 this_message = messages[-1]
                 if not is_function_call(this_message):
-                    print(f"not func: this_message: {this_message.content}")
+                    # print(f"not func: this_message: {this_message.content}")
                     this_message = self.message_to_dict(this_message)
                     text_for_ui = this_message.get("content", "")
                     yield {
@@ -179,18 +206,18 @@ class ReactAgent:
                         "is_thinking": False,
                     }
                 else:
-                    print(f"func: this_message: {this_message.content}")
+                    # print(f"func: this_message: {this_message.content}")
                     if is_function_call(this_message):
                         # Get custom message to indicate the function being called
                         if len(messages) >= 2:
                             prior_message = messages[-2]
                             if is_function_call(prior_message):
-                                print("Here1")
+                                # print("Here1")
                                 # Get custom message to indicate the function being called
                                 tool_calls = prior_message.additional_kwargs.get("tool_calls", [])
                                 func_name = tool_calls[0]["function"]["name"] if tool_calls else None
                                 custom_msg = FUNCTION_CALL_MESSAGES.get(func_name, f"Calling function: {func_name}..." if func_name else default_function_call_message)
-                                print(f"custom_msg: {custom_msg}")
+                                # print(f"custom_msg: {custom_msg}")
                                 yield {
                                     "step_type": "step",
                                     "message": custom_msg,

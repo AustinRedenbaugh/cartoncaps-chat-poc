@@ -32,6 +32,7 @@ class HelloRequest(BaseModel):
 class MessageRequest(BaseModel):
     user_id: int
     message: str
+    conversation_id: int
 
 @router.post("/hello")
 async def hello(request: HelloRequest, db: Session = Depends(get_db)):
@@ -39,14 +40,19 @@ async def hello(request: HelloRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     hello_message = f"Hello {user.name}!"
+
+    # Calculate conversation_id
+    conversation_id = crud.get_conversation_id(db, request.user_id)
+
     crud.add_conversation_message(
         db=db,
         user_id=request.user_id, 
         message=hello_message,
         sender="bot",
-        timestamp=datetime.now(timezone.utc).isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        conversation_id=conversation_id
     )
-    return {"user": user, "message": hello_message, "conversation_id": -1}
+    return {"user": user, "message": hello_message, "conversation_id": conversation_id}
 
 @router.get("/users")
 async def get_users(db: Session = Depends(get_db)):
@@ -62,13 +68,15 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
         user_id=request.user_id, 
         message=request.message,
         sender="user",
-        timestamp=timestamp
+        timestamp=timestamp,
+        conversation_id=request.conversation_id
     )
+    # conversation_id is now available as request.conversation_id, but not used yet
 
     async def event_generator():
         try:
             # Initialize ReactAgent
-            react_agent = ReactAgent(llm_with_tools, request.user_id, request.message, db=db)
+            react_agent = ReactAgent(llm_with_tools, request.user_id, request.message, request.conversation_id, db=db)
 
             # Start the agent processing
             async for step in react_agent.ainvoke():
