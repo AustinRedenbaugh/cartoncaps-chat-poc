@@ -62,6 +62,7 @@
                     },
                     // onStep callback
                     (data) => {
+                        console.log("BIGdata", data);
                         if (data.type === "step") {
                             console.log("data: ", data);
                             const stepData = data.content;
@@ -79,6 +80,16 @@
                                     message: stepData.message,
                                 };
                             }
+                        } else if (data.type === "function_call") {
+                            console.log("data.type === function_call");
+                            console.log("data: ", data);
+                            const stepData = data.content;
+                            console.log("stepData: ", stepData);
+                            // Update with function call
+                            chatMessages.value[assistantMessageIndex] = {
+                                role: "Assistant",
+                                message: data.message,
+                            };
                         }
                     },
                     // onComplete callback

@@ -87,16 +87,17 @@ export function useApi() {
 
                 for (const line of lines) {
                     const trimmedLine = line.trim();
-                    console.log("trimmedLine: ", trimmedLine)
                     if (!trimmedLine) {
                         // Empty line indicates end of event, process it
                         if (currentEvent && currentData) {
                             try {
+                                console.log("currentData: ", currentData)
                                 const parsedData = JSON.parse(currentData);
 
                                 if (currentEvent === 'step') {
                                     onStep(parsedData);
-                                } else if (currentEvent === 'complete') {
+                                }
+                                else if (currentEvent === 'complete') {
                                     onComplete();
                                 } else if (currentEvent === 'error') {
                                     onError(parsedData.message || 'An error occurred');
@@ -121,7 +122,6 @@ export function useApi() {
                         if (field === 'event') {
                             currentEvent = value;
                         } else if (field === 'data') {
-                            console.log("currentData: ", currentData)
                             currentData = value;
                         }
                     }
