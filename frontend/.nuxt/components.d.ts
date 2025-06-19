@@ -39,15 +39,6 @@ interface _GlobalComponents {
     'DialogScrollContent': typeof import("../components/ui/dialog/index")['DialogScrollContent']
     'DialogTitle': typeof import("../components/ui/dialog/index")['DialogTitle']
     'DialogTrigger': typeof import("../components/ui/dialog/index")['DialogTrigger']
-    'FormControl': typeof import("../components/ui/form/index")['FormControl']
-    'FormDescription': typeof import("../components/ui/form/index")['FormDescription']
-    'FormItem': typeof import("../components/ui/form/index")['FormItem']
-    'FormLabel': typeof import("../components/ui/form/index")['FormLabel']
-    'FormMessage': typeof import("../components/ui/form/index")['FormMessage']
-    'FORMITEMINJECTIONKEY': typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']
-    'Form': typeof import("../components/ui/form/index")['Form']
-    'FormField': typeof import("../components/ui/form/index")['FormField']
-    'FormFieldArray': typeof import("../components/ui/form/index")['FormFieldArray']
     'DropdownMenu': typeof import("../components/ui/dropdown-menu/index")['DropdownMenu']
     'DropdownMenuCheckboxItem': typeof import("../components/ui/dropdown-menu/index")['DropdownMenuCheckboxItem']
     'DropdownMenuContent': typeof import("../components/ui/dropdown-menu/index")['DropdownMenuContent']
@@ -63,6 +54,15 @@ interface _GlobalComponents {
     'DropdownMenuSubTrigger': typeof import("../components/ui/dropdown-menu/index")['DropdownMenuSubTrigger']
     'DropdownMenuTrigger': typeof import("../components/ui/dropdown-menu/index")['DropdownMenuTrigger']
     'DropdownMenuPortal': typeof import("../components/ui/dropdown-menu/index")['DropdownMenuPortal']
+    'FormControl': typeof import("../components/ui/form/index")['FormControl']
+    'FormDescription': typeof import("../components/ui/form/index")['FormDescription']
+    'FormItem': typeof import("../components/ui/form/index")['FormItem']
+    'FormLabel': typeof import("../components/ui/form/index")['FormLabel']
+    'FormMessage': typeof import("../components/ui/form/index")['FormMessage']
+    'FORMITEMINJECTIONKEY': typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']
+    'Form': typeof import("../components/ui/form/index")['Form']
+    'FormField': typeof import("../components/ui/form/index")['FormField']
+    'FormFieldArray': typeof import("../components/ui/form/index")['FormFieldArray']
     'Input': typeof import("../components/ui/input/index")['Input']
     'Label': typeof import("../components/ui/label/index")['Label']
     'NavigationMenu': typeof import("../components/ui/navigation-menu/index")['NavigationMenu']
@@ -157,15 +157,6 @@ interface _GlobalComponents {
     'LazyDialogScrollContent': LazyComponent<typeof import("../components/ui/dialog/index")['DialogScrollContent']>
     'LazyDialogTitle': LazyComponent<typeof import("../components/ui/dialog/index")['DialogTitle']>
     'LazyDialogTrigger': LazyComponent<typeof import("../components/ui/dialog/index")['DialogTrigger']>
-    'LazyFormControl': LazyComponent<typeof import("../components/ui/form/index")['FormControl']>
-    'LazyFormDescription': LazyComponent<typeof import("../components/ui/form/index")['FormDescription']>
-    'LazyFormItem': LazyComponent<typeof import("../components/ui/form/index")['FormItem']>
-    'LazyFormLabel': LazyComponent<typeof import("../components/ui/form/index")['FormLabel']>
-    'LazyFormMessage': LazyComponent<typeof import("../components/ui/form/index")['FormMessage']>
-    'LazyFORMITEMINJECTIONKEY': LazyComponent<typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']>
-    'LazyForm': LazyComponent<typeof import("../components/ui/form/index")['Form']>
-    'LazyFormField': LazyComponent<typeof import("../components/ui/form/index")['FormField']>
-    'LazyFormFieldArray': LazyComponent<typeof import("../components/ui/form/index")['FormFieldArray']>
     'LazyDropdownMenu': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenu']>
     'LazyDropdownMenuCheckboxItem': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuCheckboxItem']>
     'LazyDropdownMenuContent': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuContent']>
@@ -181,6 +172,15 @@ interface _GlobalComponents {
     'LazyDropdownMenuSubTrigger': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuSubTrigger']>
     'LazyDropdownMenuTrigger': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuTrigger']>
     'LazyDropdownMenuPortal': LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuPortal']>
+    'LazyFormControl': LazyComponent<typeof import("../components/ui/form/index")['FormControl']>
+    'LazyFormDescription': LazyComponent<typeof import("../components/ui/form/index")['FormDescription']>
+    'LazyFormItem': LazyComponent<typeof import("../components/ui/form/index")['FormItem']>
+    'LazyFormLabel': LazyComponent<typeof import("../components/ui/form/index")['FormLabel']>
+    'LazyFormMessage': LazyComponent<typeof import("../components/ui/form/index")['FormMessage']>
+    'LazyFORMITEMINJECTIONKEY': LazyComponent<typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']>
+    'LazyForm': LazyComponent<typeof import("../components/ui/form/index")['Form']>
+    'LazyFormField': LazyComponent<typeof import("../components/ui/form/index")['FormField']>
+    'LazyFormFieldArray': LazyComponent<typeof import("../components/ui/form/index")['FormFieldArray']>
     'LazyInput': LazyComponent<typeof import("../components/ui/input/index")['Input']>
     'LazyLabel': LazyComponent<typeof import("../components/ui/label/index")['Label']>
     'LazyNavigationMenu': LazyComponent<typeof import("../components/ui/navigation-menu/index")['NavigationMenu']>
@@ -281,15 +281,6 @@ export const DialogHeader: typeof import("../components/ui/dialog/index")['Dialo
 export const DialogScrollContent: typeof import("../components/ui/dialog/index")['DialogScrollContent']
 export const DialogTitle: typeof import("../components/ui/dialog/index")['DialogTitle']
 export const DialogTrigger: typeof import("../components/ui/dialog/index")['DialogTrigger']
-export const FormControl: typeof import("../components/ui/form/index")['FormControl']
-export const FormDescription: typeof import("../components/ui/form/index")['FormDescription']
-export const FormItem: typeof import("../components/ui/form/index")['FormItem']
-export const FormLabel: typeof import("../components/ui/form/index")['FormLabel']
-export const FormMessage: typeof import("../components/ui/form/index")['FormMessage']
-export const FORMITEMINJECTIONKEY: typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']
-export const Form: typeof import("../components/ui/form/index")['Form']
-export const FormField: typeof import("../components/ui/form/index")['FormField']
-export const FormFieldArray: typeof import("../components/ui/form/index")['FormFieldArray']
 export const DropdownMenu: typeof import("../components/ui/dropdown-menu/index")['DropdownMenu']
 export const DropdownMenuCheckboxItem: typeof import("../components/ui/dropdown-menu/index")['DropdownMenuCheckboxItem']
 export const DropdownMenuContent: typeof import("../components/ui/dropdown-menu/index")['DropdownMenuContent']
@@ -305,6 +296,15 @@ export const DropdownMenuSubContent: typeof import("../components/ui/dropdown-me
 export const DropdownMenuSubTrigger: typeof import("../components/ui/dropdown-menu/index")['DropdownMenuSubTrigger']
 export const DropdownMenuTrigger: typeof import("../components/ui/dropdown-menu/index")['DropdownMenuTrigger']
 export const DropdownMenuPortal: typeof import("../components/ui/dropdown-menu/index")['DropdownMenuPortal']
+export const FormControl: typeof import("../components/ui/form/index")['FormControl']
+export const FormDescription: typeof import("../components/ui/form/index")['FormDescription']
+export const FormItem: typeof import("../components/ui/form/index")['FormItem']
+export const FormLabel: typeof import("../components/ui/form/index")['FormLabel']
+export const FormMessage: typeof import("../components/ui/form/index")['FormMessage']
+export const FORMITEMINJECTIONKEY: typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']
+export const Form: typeof import("../components/ui/form/index")['Form']
+export const FormField: typeof import("../components/ui/form/index")['FormField']
+export const FormFieldArray: typeof import("../components/ui/form/index")['FormFieldArray']
 export const Input: typeof import("../components/ui/input/index")['Input']
 export const Label: typeof import("../components/ui/label/index")['Label']
 export const NavigationMenu: typeof import("../components/ui/navigation-menu/index")['NavigationMenu']
@@ -399,15 +399,6 @@ export const LazyDialogHeader: LazyComponent<typeof import("../components/ui/dia
 export const LazyDialogScrollContent: LazyComponent<typeof import("../components/ui/dialog/index")['DialogScrollContent']>
 export const LazyDialogTitle: LazyComponent<typeof import("../components/ui/dialog/index")['DialogTitle']>
 export const LazyDialogTrigger: LazyComponent<typeof import("../components/ui/dialog/index")['DialogTrigger']>
-export const LazyFormControl: LazyComponent<typeof import("../components/ui/form/index")['FormControl']>
-export const LazyFormDescription: LazyComponent<typeof import("../components/ui/form/index")['FormDescription']>
-export const LazyFormItem: LazyComponent<typeof import("../components/ui/form/index")['FormItem']>
-export const LazyFormLabel: LazyComponent<typeof import("../components/ui/form/index")['FormLabel']>
-export const LazyFormMessage: LazyComponent<typeof import("../components/ui/form/index")['FormMessage']>
-export const LazyFORMITEMINJECTIONKEY: LazyComponent<typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']>
-export const LazyForm: LazyComponent<typeof import("../components/ui/form/index")['Form']>
-export const LazyFormField: LazyComponent<typeof import("../components/ui/form/index")['FormField']>
-export const LazyFormFieldArray: LazyComponent<typeof import("../components/ui/form/index")['FormFieldArray']>
 export const LazyDropdownMenu: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenu']>
 export const LazyDropdownMenuCheckboxItem: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuCheckboxItem']>
 export const LazyDropdownMenuContent: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuContent']>
@@ -423,6 +414,15 @@ export const LazyDropdownMenuSubContent: LazyComponent<typeof import("../compone
 export const LazyDropdownMenuSubTrigger: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuSubTrigger']>
 export const LazyDropdownMenuTrigger: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuTrigger']>
 export const LazyDropdownMenuPortal: LazyComponent<typeof import("../components/ui/dropdown-menu/index")['DropdownMenuPortal']>
+export const LazyFormControl: LazyComponent<typeof import("../components/ui/form/index")['FormControl']>
+export const LazyFormDescription: LazyComponent<typeof import("../components/ui/form/index")['FormDescription']>
+export const LazyFormItem: LazyComponent<typeof import("../components/ui/form/index")['FormItem']>
+export const LazyFormLabel: LazyComponent<typeof import("../components/ui/form/index")['FormLabel']>
+export const LazyFormMessage: LazyComponent<typeof import("../components/ui/form/index")['FormMessage']>
+export const LazyFORMITEMINJECTIONKEY: LazyComponent<typeof import("../components/ui/form/index")['FORM_ITEM_INJECTION_KEY']>
+export const LazyForm: LazyComponent<typeof import("../components/ui/form/index")['Form']>
+export const LazyFormField: LazyComponent<typeof import("../components/ui/form/index")['FormField']>
+export const LazyFormFieldArray: LazyComponent<typeof import("../components/ui/form/index")['FormFieldArray']>
 export const LazyInput: LazyComponent<typeof import("../components/ui/input/index")['Input']>
 export const LazyLabel: LazyComponent<typeof import("../components/ui/label/index")['Label']>
 export const LazyNavigationMenu: LazyComponent<typeof import("../components/ui/navigation-menu/index")['NavigationMenu']>

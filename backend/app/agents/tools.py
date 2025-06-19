@@ -7,10 +7,10 @@ import os
 
 ## TOOLS ##
 class ReferralInput(BaseModel):
-    id: int
+    user_id: int
 
 @tool("get_referral_link", args_schema=ReferralInput)
-async def get_referral_link(id: int) -> str:
+async def get_referral_link(user_id: int) -> str:
     """Call this function to retrieve the referral link associated with this user"""
     return "https://cartoncaps.com/route/to/link"
 

@@ -38,7 +38,15 @@ async def hello(request: HelloRequest, db: Session = Depends(get_db)):
     user = crud.get_user_info(db, request.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    return {"user": user, "message": f"Hello {user.name}!", "conversation_id": -1}
+    hello_message = f"Hello {user.name}!"
+    crud.add_conversation_message(
+        db=db,
+        user_id=request.user_id, 
+        message=hello_message,
+        sender="bot",
+        timestamp=datetime.now(timezone.utc).isoformat()
+    )
+    return {"user": user, "message": hello_message, "conversation_id": -1}
 
 @router.get("/users")
 async def get_users(db: Session = Depends(get_db)):
@@ -60,7 +68,7 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
     async def event_generator():
         try:
             # Initialize ReactAgent
-            react_agent = ReactAgent(llm_with_tools, request.user_id, request.message)
+            react_agent = ReactAgent(llm_with_tools, request.user_id, request.message, db=db)
 
             # Start the agent processing
             async for step in react_agent.ainvoke():
