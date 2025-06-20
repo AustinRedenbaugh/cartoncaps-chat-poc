@@ -1,71 +1,25 @@
-# Carton Caps Chat POC
+# cartoncaps-chat-poc 
 
-A chat application with an iPhone-style interface built with Vue.js (Nuxt) frontend and FastAPI backend.
+## Set up BACKEND (Port 8000)
 
-## Features
+1. cd backend
+2. poetry shell
+3. poetry installl
+4. poetry run python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-- iPhone-style UI design
-- User selection dropdown (None, Austin)
-- Real-time chat interface
-- Backend API integration
-- Conversation management
+## Set up FRONTEND (Port 3000)
 
-## Setup and Running
+1. cd frontend
+2. yarn dev
 
-### Backend (FastAPI)
+## Read the docs
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
+1. http://localhost:8000/docs (while the server is running)
 
-2. Install dependencies (if not already installed):
-   ```bash
-   pip install fastapi uvicorn sqlalchemy
-   ```
 
-3. Run the backend server:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-The backend will be available at `http://localhost:8000`
-
-### Frontend (Nuxt.js)
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies (if not already installed):
-   ```bash
-   npm install
-   ```
-
-3. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-The frontend will be available at `http://localhost:3000`
-
-## API Endpoints
-
-- `GET /chat/hello?user_id={id}` - Start a new conversation with a user
-- `POST /chat/respond` - Send a message and get a response
-
-## Usage
-
-1. Open the frontend in your browser
-2. Select a user from the dropdown (Austin)
-3. Click "New Conversation with Selected User"
-4. Start chatting in the conversation area
-5. Type messages and click "Send" to continue the conversation
-
-## Architecture
-
-- **Frontend**: Vue.js with Nuxt.js, Tailwind CSS for styling
-- **Backend**: FastAPI with SQLAlchemy for database operations
-- **Proxy**: Nuxt dev proxy configured to route `/api/*` to backend
-- **CORS**: Configured to allow frontend-backend communication 
+## Project Description
+This project is a full-stack chat proof-of-concept built with Nuxt (Vue 3) for the frontend, FastAPI for the backend, and SQLite for data storage. The backend provides a RESTful API and real-time features, while the frontend offers a modern, responsive user interface. The stack is designed for rapid prototyping and easy local development.
+Frontend: Nuxt 3 (Vue 3, Vite, Tailwind CSS)
+Backend: FastAPI (Python 3), served with Uvicorn
+Database: SQLite (lightweight, file-based)
+Features: Modular component structure, API documentation via Swagger UI, easy setup for local development

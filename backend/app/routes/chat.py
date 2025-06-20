@@ -39,7 +39,7 @@ async def hello(request: HelloRequest, db: Session = Depends(get_db)):
     user = crud.get_user_info(db, request.user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    hello_message = f"Hello {user.name}!"
+    hello_message = f"Hello {user.name}! How can I assist you today? If you have any questions about CartonCaps products or need help with referral links, feel free to ask!"
 
     # Calculate conversation_id
     conversation_id = crud.get_conversation_id(db, request.user_id)
