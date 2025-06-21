@@ -31,98 +31,63 @@ class ReactAgentState(TypedDict):
     messages: Annotated[list, add_messages]
     current_node: str
 
-class ReactAgent:
-    def __init__(self, llm_with_tools, user_id, user_message, conversation_id, db=None):
+# --- Singleton Core ---
+class ReactAgentCore:
+    _instance = None
+
+    def __init__(self, llm_with_tools):
         self.llm_with_tools = llm_with_tools
-        self.user_id = user_id
-        self.conversation_id = conversation_id
-        self.user_message = user_message
-        self.db = db
         self.graph = StateGraph(ReactAgentState)
         self.tool_node = ToolNode(get_react_agent_tools())
-        self._setup_graph()
 
-    def get_initial_messages(self):
-        # Add system prompt as the first message
-        system_prompt = get_system_prompt('ReactAgent')
-        system_message = {"role": "system", "content": system_prompt}
-        messages = [system_message]
+    @classmethod
+    def get_instance(cls, llm_with_tools):
+        if cls._instance is None:
+            cls._instance = cls(llm_with_tools)
+        return cls._instance
 
-        if self.db and self.conversation_id is not None:
-            history = crud.get_conversation_messages(self.db, self.conversation_id)
-            for row in history:
-                # Try to parse as JSON for tool calls/responses
-                try:
-                    msg_data = json.loads(row.message)
-                    # Tool call (assistant triggers a function)
-                    if row.sender == "tool_call" and msg_data.get("type") == "tool_call":
-                        messages.append({
-                            "role": "assistant",
-                            "content": None,
-                            "tool_calls": [msg_data["tool_call"]]
-                        })
-                    # Tool response (tool returns result)
-                    elif row.sender == "tool_response" and msg_data.get("type") == "tool_response":
-                        messages.append({
-                            "role": "tool",
-                            "tool_call_id": msg_data["tool_call_id"],
-                            "content": msg_data["content"]
-                        })
-                    else:
-                        # Fallback to plain message
-                        role = (
-                            "user" if row.sender == "user" else
-                            "assistant" if row.sender == "bot" else
-                            "tool" if row.sender == "tool" else
-                            "assistant"
-                        )
-                        messages.append({
-                            "role": role,
-                            "content": row.message
-                        })
-                except Exception:
-                    # Not JSON, treat as plain message
-                    role = (
-                        "user" if row.sender == "user" else
-                        "assistant" if row.sender == "bot" else
-                        "tool" if row.sender == "tool" else
-                        "assistant"
-                    )
-                    messages.append({
-                        "role": role,
-                        "content": row.message
-                    })
-            return messages
+    def setup_graph(self, session):
+        graph = StateGraph(ReactAgentState)
+        async def agent_node(state):
+            return await self.call_model(state, session)
+        async def action_node(state):
+            return await self.call_tool(state, session)
+        graph.add_node("agent", agent_node)
+        graph.add_node("action", action_node)
+        graph.set_entry_point("agent")
+        graph.add_conditional_edges(
+            "agent",
+            self.should_continue,
+            {"action": "action", "end": "__end__"}
+        )
+        graph.add_edge("action", "agent")
+        return graph.compile()
 
-        # Fallback: just the current user message
-        messages.append({"role": "user", "content": self.user_message})
-        return messages
-
-    async def call_model(self, state):
+    def should_continue(self, state):
         messages = state["messages"]
-        print(f"[ReactAgent call_model] messages: {messages}")
-        # Call the LLM with the current messages
-        response = await self.llm_with_tools.ainvoke(messages)
-        # print(f"response: {response}")
-        new_messages = messages + [response]
+        if not messages:
+            return "end"
+        this_message = messages[-1]
+        tool_calls = getattr(this_message, "additional_kwargs", {}).get("tool_calls", None)
+        if tool_calls and len(tool_calls) > 0:
+            return "action"
+        return "end"
 
+    async def call_model(self, state, session):
+        messages = state["messages"]
+        response = await self.llm_with_tools.ainvoke(messages)
+        new_messages = messages + [response]
         message_to_post = getattr(response, 'content', str(response))
-        if message_to_post == "": # Handle function calls
+        if message_to_post == "":
             tool_calls = getattr(response, "additional_kwargs", {}).get("tool_calls", None)
-            # print(f"[ReactAgent call_model] tool_calls: {tool_calls}")
             if tool_calls and len(tool_calls) > 0:
                 tool_call = tool_calls[0]
                 func_name = tool_call["function"]["name"]
                 params = tool_call["function"]["arguments"]
                 message_to_post = f"function_call: '{func_name}', params: '{params}'"
-        print(f"[ReactAgent call_model] message_to_post: {message_to_post}")
-
-        # Add to Conversation_History if db is available
-        if self.db:
+        if session.db:
             timestamp = datetime.now(timezone.utc).isoformat()
-            # Determine sender type for saving
             if getattr(response, 'content', None) == "":
-                # This is a tool call
                 tool_calls = getattr(response, "additional_kwargs", {}).get("tool_calls", None)
                 if tool_calls and len(tool_calls) > 0:
                     tool_call = tool_calls[0]
@@ -136,37 +101,32 @@ class ReactAgent:
             else:
                 sender_type = "bot"
             crud.add_conversation_message(
-                db=self.db,
-                user_id=self.user_id,
+                db=session.db,
+                user_id=session.user_id,
                 message=message_to_post,
                 sender=sender_type,
                 timestamp=timestamp,
-                conversation_id=self.conversation_id
+                conversation_id=session.conversation_id
             )
-        # print(f"[ReactAgent call_model] new_messages: {new_messages}")
         return {"messages": new_messages, "current_node": "call_model"}
 
     def message_to_dict(self, msg):
-        # If already a dict, return as is
         if isinstance(msg, dict):
             return msg
-        # If LangChain message, try .dict() or .to_dict()
         if hasattr(msg, "dict"):
             return msg.dict()
         if hasattr(msg, "to_dict"):
             return msg.to_dict()
-        # Fallback: use vars
         return vars(msg)
 
-    async def call_tool(self, state):
+    async def call_tool(self, state, session):
         messages = state["messages"]
         try:
             tool_result = await self.tool_node.ainvoke({"messages": messages})
             tool_response = self.message_to_dict(tool_result.get("messages", [None])[-1])
             tool_text = tool_result.get("messages", [None])[-1].content if tool_result.get("messages") else None
             new_messages = messages + [tool_response]
-            # Save tool response as JSON
-            if self.db and tool_response is not None:
+            if session.db and tool_response is not None:
                 timestamp = datetime.now(timezone.utc).isoformat()
                 if "tool_call_id" in tool_response:
                     message_to_post = json.dumps({
@@ -176,72 +136,98 @@ class ReactAgent:
                     })
                     sender_type = "tool_response"
                     crud.add_conversation_message(
-                        db=self.db,
-                        user_id=self.user_id,
+                        db=session.db,
+                        user_id=session.user_id,
                         message=message_to_post,
                         sender=sender_type,
                         timestamp=timestamp,
-                        conversation_id=self.conversation_id
+                        conversation_id=session.conversation_id
                     )
         except Exception as e:
             tool_text = f"[Tool error: {e}]"
             new_messages = messages
-        print(f"[ReactAgent call_tool] tool_text: {tool_text}")
-        # Add to Conversation_History if db is available
-        if self.db and tool_response is not None:
+        if session.db and tool_response is not None:
             timestamp = datetime.now(timezone.utc).isoformat()
             crud.add_conversation_message(
-                db=self.db,
-                user_id=self.user_id,
+                db=session.db,
+                user_id=session.user_id,
                 message=tool_text,
                 sender="tool_response",
                 timestamp=timestamp,
-                conversation_id=self.conversation_id
+                conversation_id=session.conversation_id
             )
-        # print(f"[ReactAgent call_tool] new_messages: {new_messages}")
         return {"messages": new_messages, "current_node": "call_tool"}
 
-    def should_continue(self, state):
-        messages = state["messages"]
-        if not messages:
-            return "end"
-        this_message = messages[-1]
-        tool_calls = getattr(this_message, "additional_kwargs", {}).get("tool_calls", None)
-        if tool_calls and len(tool_calls) > 0:
-            print("[ReactAgent should_continue] : action (function call detected)")
-            return "action"
-        print("[ReactAgent should_continue]: end")
-        return "end"
+# --- Per-request Session ---
+class ReactAgentSession:
+    def __init__(self, core, user_id, user_message, conversation_id, db):
+        self.core = core
+        self.set_initial_state(user_id, user_message, conversation_id, db)
+        self.app = self.core.setup_graph(self)
 
-    def _setup_graph(self):
-        """Setup the LangGraph workflow with agent and action nodes and conditional edge."""
-        self.graph.add_node("agent", self.call_model)
-        self.graph.add_node("action", self.call_tool)
-        self.graph.set_entry_point("agent")
-        self.graph.add_conditional_edges(
-            "agent",
-            self.should_continue,
-            {"action": "action", "end": "__end__"}
-        )
-        self.graph.add_edge("action", "agent")
-        self.app = self.graph.compile()
+    def set_initial_state(self, user_id, user_message, conversation_id, db):
+        self.user_id = user_id
+        self.user_message = user_message
+        self.conversation_id = conversation_id
+        self.db = db
 
-    async def ainvoke(self) -> AsyncGenerator[dict, None]:
-        """Async generator: yields each step, and yields a final response at the end."""
+    def get_initial_messages(self):
+        system_prompt = get_system_prompt('ReactAgent')
+        system_message = {"role": "system", "content": system_prompt}
+        messages = [system_message]
+        if self.db and self.conversation_id is not None:
+            history = crud.get_conversation_messages(self.db, self.conversation_id)
+            for row in history:
+                try:
+                    msg_data = json.loads(row.message)
+                    if row.sender == "tool_call" and msg_data.get("type") == "tool_call":
+                        messages.append({
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [msg_data["tool_call"]]
+                        })
+                    elif row.sender == "tool_response" and msg_data.get("type") == "tool_response":
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": msg_data["tool_call_id"],
+                            "content": msg_data["content"]
+                        })
+                    else:
+                        role = (
+                            "user" if row.sender == "user" else
+                            "assistant" if row.sender == "bot" else
+                            "tool" if row.sender == "tool" else
+                            "assistant"
+                        )
+                        messages.append({
+                            "role": role,
+                            "content": row.message
+                        })
+                except Exception:
+                    role = (
+                        "user" if row.sender == "user" else
+                        "assistant" if row.sender == "bot" else
+                        "tool" if row.sender == "tool" else
+                        "assistant"
+                    )
+                    messages.append({
+                        "role": role,
+                        "content": row.message
+                    })
+            return messages
+        messages.append({"role": "user", "content": self.user_message})
+        return messages
+
+    async def ainvoke(self):
         messages = self.get_initial_messages()
         initial_state = {
             "messages": messages,
             "current_node": "__start__"
         }
-        print(f"[ReactAgent ainvoke] initial_state: {initial_state}")
         try:
             async for step in self.app.astream(initial_state, stream_mode="values"):
-                # print(f"step: {step}")
                 messages = step["messages"]
                 current_node = step["current_node"]
-                # print(f"current_node: {current_node}")
-
-                # If this is the final step, yield a final response and break
                 if current_node == "__end__":
                     if messages:
                         this_message = messages[-1]
@@ -252,15 +238,11 @@ class ReactAgent:
                                 "is_thinking": False,
                             }
                     break
-                
                 if current_node == "__start__":
                     continue
-
-                # Yield depending on UI Update is desired 
                 this_message = messages[-1]
                 if not is_function_call(this_message):
-                    # print(f"not func: this_message: {this_message.content}")
-                    this_message = self.message_to_dict(this_message)
+                    this_message = self.core.message_to_dict(this_message)
                     text_for_ui = this_message.get("content", "")
                     yield {
                         "step_type": "step",
@@ -268,18 +250,13 @@ class ReactAgent:
                         "is_thinking": False,
                     }
                 else:
-                    # print(f"func: this_message: {this_message.content}")
                     if is_function_call(this_message):
-                        # Get custom message to indicate the function being called
                         if len(messages) >= 2:
                             prior_message = messages[-2]
                             if is_function_call(prior_message):
-                                # print("Here1")
-                                # Get custom message to indicate the function being called
                                 tool_calls = prior_message.additional_kwargs.get("tool_calls", [])
                                 func_name = tool_calls[0]["function"]["name"] if tool_calls else None
                                 custom_msg = FUNCTION_CALL_MESSAGES.get(func_name, f"Calling function: {func_name}..." if func_name else default_function_call_message)
-                                # print(f"custom_msg: {custom_msg}")
                                 yield {
                                     "step_type": "step",
                                     "message": custom_msg,
@@ -288,10 +265,10 @@ class ReactAgent:
                     pass
         except Exception as e:
             tb_str = traceback.format_exc()
-            print(f"ReactAgent.ainvoke error: {e}\n{tb_str}")
+            print(f"[ReactAgent ainvoke] error: {tb_str}")
             yield {
                 "step_type": "error",
-                "message": "",
+                "message": str(e),
                 "is_thinking": True,
             }
 

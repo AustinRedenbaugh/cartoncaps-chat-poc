@@ -10,7 +10,7 @@ import json
 import asyncio
 load_dotenv()
 
-from ..agents.react_agent import ReactAgent
+from ..agents.react_agent import ReactAgentCore, ReactAgentSession
 from .. import crud
 from ..database import get_db
 
@@ -61,7 +61,6 @@ async def get_users(db: Session = Depends(get_db)):
 
 @router.post("/respond")
 async def stream_response(request: MessageRequest, db: Session = Depends(get_db)):
-    # Post UserMessage to Conversation_History
     timestamp = datetime.now(timezone.utc).isoformat()
     crud.add_conversation_message(
         db=db,
@@ -71,15 +70,12 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
         timestamp=timestamp,
         conversation_id=request.conversation_id
     )
-    # conversation_id is now available as request.conversation_id, but not used yet
-
+    core = ReactAgentCore.get_instance(llm_with_tools)
+    session = ReactAgentSession(core, request.user_id, request.message, request.conversation_id, db)
+    session.set_initial_state(request.user_id, request.message, request.conversation_id, db)
     async def event_generator():
         try:
-            # Initialize ReactAgent
-            react_agent = ReactAgent(llm_with_tools, request.user_id, request.message, request.conversation_id, db=db)
-
-            # Start the agent processing
-            async for step in react_agent.ainvoke():
+            async for step in session.ainvoke():
                 step_type = step.get("step_type")
                 if step_type == "step":
                     yield {
@@ -112,7 +108,6 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
                     break
                 await asyncio.sleep(0.1)
         except Exception as e:
-            # Send error event
             yield {
                 "event": "error",
                 "data": json.dumps({
@@ -121,5 +116,4 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
             }
-
     return EventSourceResponse(event_generator())
