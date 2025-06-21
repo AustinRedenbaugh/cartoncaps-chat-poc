@@ -46,27 +46,57 @@ class ReactAgent:
         # Add system prompt as the first message
         system_prompt = get_system_prompt('ReactAgent')
         system_message = {"role": "system", "content": system_prompt}
-        # If db and conversation_id are available, fetch all prior messages for this conversation
+        messages = [system_message]
+
         if self.db and self.conversation_id is not None:
             history = crud.get_conversation_messages(self.db, self.conversation_id)
-            messages = []
             for row in history:
-                if row.sender == 'user':
-                    role = 'user'
-                elif row.sender == 'bot':
-                    role = 'assistant'
-                elif row.sender == 'tool':
-                    role = 'tool'
-                else:
-                    role = 'assistant'  # fallback
-                messages.append({
-                    'role': role,
-                    'content': row.message
-                })
-            if messages:
-                return [system_message] + messages
+                # Try to parse as JSON for tool calls/responses
+                try:
+                    msg_data = json.loads(row.message)
+                    # Tool call (assistant triggers a function)
+                    if row.sender == "tool_call" and msg_data.get("type") == "tool_call":
+                        messages.append({
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [msg_data["tool_call"]]
+                        })
+                    # Tool response (tool returns result)
+                    elif row.sender == "tool_response" and msg_data.get("type") == "tool_response":
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": msg_data["tool_call_id"],
+                            "content": msg_data["content"]
+                        })
+                    else:
+                        # Fallback to plain message
+                        role = (
+                            "user" if row.sender == "user" else
+                            "assistant" if row.sender == "bot" else
+                            "tool" if row.sender == "tool" else
+                            "assistant"
+                        )
+                        messages.append({
+                            "role": role,
+                            "content": row.message
+                        })
+                except Exception:
+                    # Not JSON, treat as plain message
+                    role = (
+                        "user" if row.sender == "user" else
+                        "assistant" if row.sender == "bot" else
+                        "tool" if row.sender == "tool" else
+                        "assistant"
+                    )
+                    messages.append({
+                        "role": role,
+                        "content": row.message
+                    })
+            return messages
+
         # Fallback: just the current user message
-        return [system_message, {"role": "user", "content": self.user_message}]
+        messages.append({"role": "user", "content": self.user_message})
+        return messages
 
     async def call_model(self, state):
         messages = state["messages"]
@@ -90,11 +120,26 @@ class ReactAgent:
         # Add to Conversation_History if db is available
         if self.db:
             timestamp = datetime.now(timezone.utc).isoformat()
+            # Determine sender type for saving
+            if getattr(response, 'content', None) == "":
+                # This is a tool call
+                tool_calls = getattr(response, "additional_kwargs", {}).get("tool_calls", None)
+                if tool_calls and len(tool_calls) > 0:
+                    tool_call = tool_calls[0]
+                    message_to_post = json.dumps({
+                        "type": "tool_call",
+                        "tool_call": tool_call
+                    })
+                    sender_type = "tool_call"
+                else:
+                    sender_type = "bot"
+            else:
+                sender_type = "bot"
             crud.add_conversation_message(
                 db=self.db,
                 user_id=self.user_id,
                 message=message_to_post,
-                sender="bot",
+                sender=sender_type,
                 timestamp=timestamp,
                 conversation_id=self.conversation_id
             )
@@ -117,11 +162,27 @@ class ReactAgent:
         messages = state["messages"]
         try:
             tool_result = await self.tool_node.ainvoke({"messages": messages})
-            # tool_result['messages'] is a list of ToolMessage(s)
             tool_response = self.message_to_dict(tool_result.get("messages", [None])[-1])
-            # print(f"Xtool_response: {tool_response}")
             tool_text = tool_result.get("messages", [None])[-1].content if tool_result.get("messages") else None
             new_messages = messages + [tool_response]
+            # Save tool response as JSON
+            if self.db and tool_response is not None:
+                timestamp = datetime.now(timezone.utc).isoformat()
+                if "tool_call_id" in tool_response:
+                    message_to_post = json.dumps({
+                        "type": "tool_response",
+                        "tool_call_id": tool_response["tool_call_id"],
+                        "content": tool_response["content"]
+                    })
+                    sender_type = "tool_response"
+                    crud.add_conversation_message(
+                        db=self.db,
+                        user_id=self.user_id,
+                        message=message_to_post,
+                        sender=sender_type,
+                        timestamp=timestamp,
+                        conversation_id=self.conversation_id
+                    )
         except Exception as e:
             tool_text = f"[Tool error: {e}]"
             new_messages = messages
@@ -133,7 +194,7 @@ class ReactAgent:
                 db=self.db,
                 user_id=self.user_id,
                 message=tool_text,
-                sender="tool",
+                sender="tool_response",
                 timestamp=timestamp,
                 conversation_id=self.conversation_id
             )
@@ -172,6 +233,7 @@ class ReactAgent:
             "messages": messages,
             "current_node": "__start__"
         }
+        print(f"[ReactAgent ainvoke] initial_state: {initial_state}")
         try:
             async for step in self.app.astream(initial_state, stream_mode="values"):
                 # print(f"step: {step}")
