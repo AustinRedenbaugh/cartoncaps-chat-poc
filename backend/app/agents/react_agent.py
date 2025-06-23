@@ -237,7 +237,8 @@ class ReactAgentSession:
                 if current_node == "__end__":
                     if messages:
                         this_message = messages[-1]
-                        if this_message.get("role") == "assistant":
+                        print("DEBUG: Last message at end:", this_message)
+                        if this_message.get("role") in ("assistant", "tool"):
                             yield {
                                 "step_type": "final_response",
                                 "message": messages[-1],
