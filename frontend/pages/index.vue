@@ -26,14 +26,15 @@
     // Loading state for streaming
     const isStreaming = ref(false);
 
-    // Register a custom renderer for links to open in new tab
+    // Register a custom renderer for links to open in new tab and use Tailwind classes
     marked.use({
         renderer: {
             link(token: any) {
                 const href = token.href;
                 const title = token.title ? ` title="${token.title}"` : "";
                 const text = this.parser.parseInline(token.tokens);
-                return `<a href="${href}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
+                // Add Tailwind classes for blue link styling
+                return `<a href="${href}"${title} target="_blank" rel="noopener noreferrer" class="text-blue-600 underline font-medium transition-colors hover:text-blue-700">${text}</a>`;
             }
         }
     });
@@ -225,15 +226,3 @@
         </Button>
     </div>
 </template>
-
-<style scoped>
-a {
-  color: #2563eb; /* Tailwind blue-600 */
-  text-decoration: underline;
-  font-weight: 500;
-  transition: color 0.2s;
-}
-a:hover {
-  color: #1d4ed8; /* Tailwind blue-700 */
-}
-</style>
