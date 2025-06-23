@@ -21,8 +21,6 @@ llm = ChatOpenAI(
 )
 
 from ..agents.tools import get_react_agent_tools
-tools = get_react_agent_tools()
-llm_with_tools = llm.bind_tools(tools)
 
 router = APIRouter()
 
@@ -70,7 +68,7 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
         timestamp=timestamp,
         conversation_id=request.conversation_id
     )
-    core = ReactAgentCore.get_instance(llm_with_tools)
+    core = ReactAgentCore.get_instance(llm, request.user_id)
     session = ReactAgentSession(core, request.user_id, request.message, request.conversation_id, db)
     session.set_initial_state(request.user_id, request.message, request.conversation_id, db)
     async def event_generator():

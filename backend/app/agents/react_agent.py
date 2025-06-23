@@ -34,16 +34,21 @@ class ReactAgentState(TypedDict):
 # --- Singleton Core ---
 class ReactAgentCore:
     _instance = None
+    _last_user_id = None
 
-    def __init__(self, llm_with_tools):
+    def __init__(self, llm_with_tools, user_id):
         self.llm_with_tools = llm_with_tools
         self.graph = StateGraph(ReactAgentState)
-        self.tool_node = ToolNode(get_react_agent_tools())
+        self.user_id = user_id
 
     @classmethod
-    def get_instance(cls, llm_with_tools):
-        if cls._instance is None:
-            cls._instance = cls(llm_with_tools)
+    def get_instance(cls, llm, user_id):
+        if cls._instance is None or cls._last_user_id != user_id:
+            from .tools import get_react_agent_tools
+            tools = get_react_agent_tools({"user_id": user_id})
+            llm_with_tools = llm.bind_tools(tools)
+            cls._instance = cls(llm_with_tools, user_id)
+            cls._last_user_id = user_id
         return cls._instance
 
     def setup_graph(self, session):
@@ -122,7 +127,7 @@ class ReactAgentCore:
     async def call_tool(self, state, session):
         messages = state["messages"]
         try:
-            tool_result = await self.tool_node.ainvoke({"messages": messages})
+            tool_result = await session.tool_node.ainvoke({"messages": messages})
             tool_response = self.message_to_dict(tool_result.get("messages", [None])[-1])
             tool_text = tool_result.get("messages", [None])[-1].content if tool_result.get("messages") else None
             new_messages = messages + [tool_response]
@@ -163,6 +168,7 @@ class ReactAgentSession:
     def __init__(self, core, user_id, user_message, conversation_id, db):
         self.core = core
         self.set_initial_state(user_id, user_message, conversation_id, db)
+        self.tool_node = ToolNode(get_react_agent_tools(user_id))
         self.app = self.core.setup_graph(self)
 
     def set_initial_state(self, user_id, user_message, conversation_id, db):

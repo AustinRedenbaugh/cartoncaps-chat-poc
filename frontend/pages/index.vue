@@ -3,6 +3,7 @@
     import { ScrollArea } from "@/components/ui/scroll-area";
     import { Textarea } from "@/components/ui/textarea";
     import { Button } from "@/components/ui/button";
+    import { marked } from "marked";
 
     import type { ChatMessageEntry } from "@/types/ChatMessage";
 
@@ -24,6 +25,18 @@
 
     // Loading state for streaming
     const isStreaming = ref(false);
+
+    // Register a custom renderer for links to open in new tab
+    marked.use({
+        renderer: {
+            link(token: any) {
+                const href = token.href;
+                const title = token.title ? ` title="${token.title}"` : "";
+                const text = this.parser.parseInline(token.tokens);
+                return `<a href="${href}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
+            }
+        }
+    });
 
     // Send message function
     const sendMessage = async () => {
@@ -135,6 +148,10 @@
             }
         }
     });
+
+    function renderMessage(msg: string) {
+        return marked.parse(msg);
+    }
 </script>
 
 <template>
@@ -172,7 +189,7 @@
                                             : 'bg-blue-300 text-black pr-2',
                                 ]"
                             >
-                                {{ msg.message ?? "(no message)" }}
+                                <span v-html="renderMessage(msg.message ?? '(no message)')"></span>
                             </div>
                             <div
                                 :class="[
@@ -208,3 +225,15 @@
         </Button>
     </div>
 </template>
+
+<style scoped>
+a {
+  color: #2563eb; /* Tailwind blue-600 */
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+a:hover {
+  color: #1d4ed8; /* Tailwind blue-700 */
+}
+</style>
