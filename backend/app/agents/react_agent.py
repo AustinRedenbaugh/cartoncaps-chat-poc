@@ -41,6 +41,7 @@ class ReactAgentCore:
         self.llm_with_tools = llm_with_tools
         self.graph = StateGraph(ReactAgentState)
         self.user_id = user_id
+        self.app = None  # Add this line to store the compiled graph
 
     @classmethod
     def get_instance(cls, llm, user_id):
@@ -163,6 +164,13 @@ class ReactAgentCore:
             )
         return {"messages": new_messages, "current_node": "call_tool"}
 
+    def get_app(self, session):
+        # Only rebuild if app is None or user_id has changed
+        if self.app is None or self.user_id != session.user_id:
+            self.app = self.setup_graph(session)
+            self.user_id = session.user_id
+        return self.app
+
 # --- Per-request Session ---
 class ReactAgentSession:
     def __init__(self, core, user_id, user_message, conversation_id, db, llm):
@@ -171,7 +179,7 @@ class ReactAgentSession:
         self.set_initial_state(user_id, user_message, conversation_id, db)
         tools = get_react_agent_tools(user_id) + get_sql_agent_tools(self.llm, user_id)
         self.tool_node = ToolNode(tools)
-        self.app = self.core.setup_graph(self)
+        self.app = self.core.get_app(self)  # Use the core's get_app method
 
     def set_initial_state(self, user_id, user_message, conversation_id, db):
         self.user_id = user_id
