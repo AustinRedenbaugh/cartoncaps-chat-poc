@@ -31,7 +31,7 @@ def get_sql_feedback_model(user_id: int):
             description=f"Return True if there exists an SQL query that would be helpful to answer the user's question, False otherwise. The user_id is {user_id} (do not ask the user for it)."
         )),
         content=(str, Field(
-            description=f"Return an SQL query, the results of which would be helpful in answering the user's question. If no such helpful SQL query exists, return a string that explains why no such query exists. The user_id is {user_id} (do not ask the user for it)."
+            description=f"Return an SQL query, the results of which would be helpful in answering the user's question. If no such helpful SQL query exists, return a string that explains why no such query exists. The user_id is {user_id}, you may need to use this value in your query (do not ask the user for it)."
         )),
         table_name=(Literal['Products', 'Purchase_History'], Field(
             description="Indicate the name of the table the SQL query is getting results from. Must be one of: 'Products', 'Purchase_History'."
@@ -104,6 +104,7 @@ class SQLAgentCore:
             feedback: SQLFeedback = await llm_structured.ainvoke(messages) # type: ignore
             state["sql_attempts"] += 1
             state["sql_possible"] = feedback.possible
+            print(f"[SQLAgent generate_sql] sql_query: {feedback.content}")
             state["sql_query"] = feedback.content if feedback.possible else None
             state["final_result"] = feedback.content if not feedback.possible else None
             # Use table_name from feedback
