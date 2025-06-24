@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from .. import crud
 load_dotenv()
 import traceback
-from .tools import get_react_agent_tools
+from .tools import get_react_agent_tools, get_sql_agent_tools
 import json
 import inspect
 from .prompts import get_system_prompt
@@ -23,6 +23,7 @@ from .prompts import get_system_prompt
 default_function_call_message = "Calling function..."
 FUNCTION_CALL_MESSAGES = {
     "get_referral_link": "Getting referral link...",
+    "use_sql_agent": "Checking database...",
     # Add more mappings as needed
 }
 
@@ -44,8 +45,7 @@ class ReactAgentCore:
     @classmethod
     def get_instance(cls, llm, user_id):
         if cls._instance is None or cls._last_user_id != user_id:
-            from .tools import get_react_agent_tools
-            tools = get_react_agent_tools({"user_id": user_id})
+            tools = get_react_agent_tools(user_id) + get_sql_agent_tools(llm, user_id)
             llm_with_tools = llm.bind_tools(tools)
             cls._instance = cls(llm_with_tools, user_id)
             cls._last_user_id = user_id
@@ -165,10 +165,12 @@ class ReactAgentCore:
 
 # --- Per-request Session ---
 class ReactAgentSession:
-    def __init__(self, core, user_id, user_message, conversation_id, db):
+    def __init__(self, core, user_id, user_message, conversation_id, db, llm):
         self.core = core
+        self.llm = llm
         self.set_initial_state(user_id, user_message, conversation_id, db)
-        self.tool_node = ToolNode(get_react_agent_tools(user_id))
+        tools = get_react_agent_tools(user_id) + get_sql_agent_tools(self.llm, user_id)
+        self.tool_node = ToolNode(tools)
         self.app = self.core.setup_graph(self)
 
     def set_initial_state(self, user_id, user_message, conversation_id, db):
@@ -232,6 +234,7 @@ class ReactAgentSession:
         }
         try:
             async for step in self.app.astream(initial_state, stream_mode="values"):
+                # print(f"[ReactAgent ainvoke] step: {step}")
                 messages = step["messages"]
                 current_node = step["current_node"]
                 if current_node == "__end__":
@@ -247,8 +250,10 @@ class ReactAgentSession:
                     break
                 if current_node == "__start__":
                     continue
+
                 this_message = messages[-1]
-                if not is_function_call(this_message):
+                print(f"[ReactAgent ainvoke] this_message: {this_message}")
+                if not is_function_call(this_message): 
                     this_message = self.core.message_to_dict(this_message)
                     text_for_ui = this_message.get("content", "")
                     yield {
@@ -256,19 +261,18 @@ class ReactAgentSession:
                         "message": text_for_ui,
                         "is_thinking": False,
                     }
-                else:
-                    if is_function_call(this_message):
-                        if len(messages) >= 2:
-                            prior_message = messages[-2]
-                            if is_function_call(prior_message):
-                                tool_calls = prior_message.additional_kwargs.get("tool_calls", [])
-                                func_name = tool_calls[0]["function"]["name"] if tool_calls else None
-                                custom_msg = FUNCTION_CALL_MESSAGES.get(func_name, f"Calling function: {func_name}..." if func_name else default_function_call_message)
-                                yield {
-                                    "step_type": "step",
-                                    "message": custom_msg,
-                                    "is_thinking": True,
-                                }
+                else: # AIMessages that decide to call a function AND ToolMessages that are the response to a function call
+                    if isinstance(this_message, AIMessage):
+                        tool_calls = this_message.additional_kwargs.get("tool_calls", [])
+                        func_name = tool_calls[0]["function"]["name"] if tool_calls else None
+                        print(f"[ReactAgent ainvoke] func_name: {func_name}")
+                        custom_msg = FUNCTION_CALL_MESSAGES.get(func_name if func_name else default_function_call_message)
+                        print(f"[ReactAgent ainvoke] custom_msg: {custom_msg}")
+                        yield {
+                            "step_type": "step",
+                            "message": custom_msg,
+                            "is_thinking": True,
+                        }
                     pass
         except Exception as e:
             tb_str = traceback.format_exc()
@@ -281,9 +285,11 @@ class ReactAgentSession:
 
 def is_function_call(message: BaseMessage) -> bool:
     if isinstance(message, AIMessage):
+        print("AI MESSAGE")
         tool_calls = message.additional_kwargs.get("tool_calls", [])
         return len(tool_calls) > 0
     elif isinstance(message, ToolMessage):
+        print("TOOL MESSAGE")
         # ToolMessage implies a function has already been called and responded
         return True
     return False

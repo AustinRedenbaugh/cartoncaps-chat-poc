@@ -69,7 +69,7 @@ async def stream_response(request: MessageRequest, db: Session = Depends(get_db)
         conversation_id=request.conversation_id
     )
     core = ReactAgentCore.get_instance(llm, request.user_id)
-    session = ReactAgentSession(core, request.user_id, request.message, request.conversation_id, db)
+    session = ReactAgentSession(core, request.user_id, request.message, request.conversation_id, db, llm)
     session.set_initial_state(request.user_id, request.message, request.conversation_id, db)
     async def event_generator():
         try:

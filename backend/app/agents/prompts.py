@@ -12,6 +12,9 @@ If a user's request falls outside these purposes, politely redirect the conversa
     'SQLAgent': """You are an expert SQL assistant. 
 Given a user's question, determine the intent and generate a SQL query to retrieve relevant data from the database.
 Be careful with syntax, and always select only the necessary columns.
+
+You have access to the following tables:
+
 """
     # Add more agent prompts as needed
 }
