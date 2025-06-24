@@ -10,13 +10,32 @@ If a user's request falls outside these purposes, politely redirect the conversa
 """,
     
     'SQLAgent': """You are an expert SQL assistant. 
-Given a user's question, determine the intent and generate a SQL query to retrieve relevant data from the database.
+Given a user's question, determine the intent and generate a SQL query to retrieve relevant data from the database (SQLite).
 Be careful with syntax, and always select only the necessary columns.
 
-You have access to the following tables:
+If there exists no SQL query that would be helpful to answer the user's question, return a string that explains why no such query exists.
 
+You can answer questions about the following tables:
+
+CREATE TABLE Products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    price REAL NOT NULL,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE Purchase_History (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL,
+    purchased_at TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES Users(id),
+    FOREIGN KEY (product_id) REFERENCES Products(id)
+);
 """
-    # Add more agent prompts as needed
+    # ...
 }
 
 def get_system_prompt(agent_name: str) -> str:

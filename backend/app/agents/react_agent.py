@@ -252,7 +252,7 @@ class ReactAgentSession:
                     continue
 
                 this_message = messages[-1]
-                print(f"[ReactAgent ainvoke] this_message: {this_message}")
+                # print(f"[ReactAgent ainvoke] this_message: {this_message}")
                 if not is_function_call(this_message): 
                     this_message = self.core.message_to_dict(this_message)
                     text_for_ui = this_message.get("content", "")
@@ -285,11 +285,11 @@ class ReactAgentSession:
 
 def is_function_call(message: BaseMessage) -> bool:
     if isinstance(message, AIMessage):
-        print("AI MESSAGE")
+        # print("AI MESSAGE")
         tool_calls = message.additional_kwargs.get("tool_calls", [])
         return len(tool_calls) > 0
     elif isinstance(message, ToolMessage):
-        print("TOOL MESSAGE")
+        # print("TOOL MESSAGE")
         # ToolMessage implies a function has already been called and responded
         return True
     return False

@@ -15,7 +15,7 @@ def get_react_agent_tools(user_id):
         return f"The referral link for this user is {link}. Always share this link as a hyperlink called 'Referral Link'."
     return [get_referral_link]
 
-# Dynamically build schema description from SQLAlchemy models
+
 def get_schema_description():
     lines = ["Tables:"]
     metadata = Base.metadata
@@ -28,11 +28,11 @@ def get_schema_description():
 def get_sql_agent_tools(llm, user_id):
     @tool(
         "use_sql_agent",
-        description="Call this function to answer questions about Products/Inventory. Pass the user's question as the 'query' argument."
+        description="Call this function to answer questions about Products in the inventory or about the Purchase_History of the user. Pass the user's question as the 'query' argument."
     )
     async def use_sql_agent(query: str) -> str:
-        schema_description = get_schema_description()
-        prompt = get_system_prompt('SQLAgent') + "\n" + schema_description
+        # Dynamically build schema description from SQLAlchemy models in the future
+        prompt = get_system_prompt('SQLAgent')
         # Patch the system prompt for this run
         def patched_get_system_prompt(agent_name):
             if agent_name == 'SQLAgent':
@@ -48,10 +48,8 @@ def get_sql_agent_tools(llm, user_id):
         ]
         # Run the agent and collect the final response
         async for step in session.ainvoke():
+            print(f"[use_sql_agent] step: {step}")
             if step["step_type"] == "final_response":
-                msg = step["message"]
-                if isinstance(msg, dict):
-                    return msg.get("content", str(msg))
-                return str(msg)
+                return step["message"]
         return "No response from SQL agent."
     return [use_sql_agent]
